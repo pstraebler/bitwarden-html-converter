@@ -2,30 +2,38 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - main
+      - master
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
 
 jobs:
   build:
     name: Build for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: linux
+            runs-on: ubuntu-latest
             goos: linux
             goarch: amd64
             output: bitwarden-html-converter-linux-amd64
-          - os: windows-latest
+          - os: windows
+            runs-on: windows-latest
             goos: windows
             goarch: amd64
             output: bitwarden-html-converter-windows-amd64.exe
-          - os: macos-latest
+          - os: macos-amd64
+            runs-on: macos-13
             goos: darwin
             goarch: amd64
             output: bitwarden-html-converter-macos-amd64
-          - os: macos-latest
+          - os: macos-arm64
+            runs-on: macos-latest
             goos: darwin
             goarch: arm64
             output: bitwarden-html-converter-macos-arm64
@@ -37,7 +45,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22'
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -45,14 +53,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc libgl1-mesa-dev xorg-dev
 
-      - name: Get dependencies
-        run: go mod download
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw
+
+      - name: Tidy and download dependencies
+        run: |
+          go mod tidy
+          go mod download
 
       - name: Build
         env:
           CGO_ENABLED: 1
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
         run: |
           go build -o ${{ matrix.output }} -ldflags="-s -w" .
 
