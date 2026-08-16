@@ -15,17 +15,19 @@ type BitwardenExport struct {
 }
 
 type BitwardenItem struct {
-	ID             string              `json:"id"`
-	OrganizationID *string             `json:"organizationId"`
-	FolderID       *string             `json:"folderId"`
-	Type           int                 `json:"type"`
-	Name           string              `json:"name"`
-	Notes          *string             `json:"notes"`
-	Favorite       bool                `json:"favorite"`
-	Login          *BitwardenLogin     `json:"login"`
-	Card           *BitwardenCard      `json:"card"`
-	Identity       *BitwardenIdentity  `json:"identity"`
-	SecureNote     *BitwardenSecureNote `json:"secureNote"`
+	ID               string              `json:"id"`
+	OrganizationID   *string             `json:"organizationId"`
+	FolderID         *string             `json:"folderId"`
+	Type             int                 `json:"type"`
+	Name             string              `json:"name"`
+	Notes            *string             `json:"notes"`
+	Favorite         bool                `json:"favorite"`
+	Login            *BitwardenLogin     `json:"login"`
+	Card             *BitwardenCard      `json:"card"`
+	Identity         *BitwardenIdentity  `json:"identity"`
+	SecureNote       *BitwardenSecureNote `json:"secureNote"`
+	CreationDate     *string             `json:"creationDate"`
+	RevisionDate     *string             `json:"revisionDate"`
 }
 
 type BitwardenLogin struct {
@@ -73,7 +75,23 @@ type BitwardenSecureNote struct {
 	Type int `json:"type"`
 }
 
-func ConvertBitwardenToHTML(inputPath, outputPath string) error {
+type ExportFields struct {
+	Type              bool
+	Name              bool
+	Username          bool
+	Password          bool
+	Notes             bool
+	URL               bool
+	Favorite          bool
+	TOTP              bool
+	CreationDate      bool
+	ModificationDate  bool
+	PasswordRevision  bool
+	Folder            bool
+	Organization      bool
+}
+
+func ConvertBitwardenToHTML(inputPath, outputPath string, fields ExportFields) error {
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("error reading file: %w", err)
@@ -88,7 +106,7 @@ func ConvertBitwardenToHTML(inputPath, outputPath string) error {
 		return fmt.Errorf("file is encrypted, please export as unencrypted JSON")
 	}
 
-	htmlContent := generateHTML(export)
+	htmlContent := generateHTML(export, fields)
 
 	if err := os.WriteFile(outputPath, []byte(htmlContent), 0644); err != nil {
 		return fmt.Errorf("error writing HTML file: %w", err)
@@ -97,7 +115,7 @@ func ConvertBitwardenToHTML(inputPath, outputPath string) error {
 	return nil
 }
 
-func generateHTML(export BitwardenExport) string {
+func generateHTML(export BitwardenExport, fields ExportFields) string {
 	var sb strings.Builder
 
 	sb.WriteString(`<!DOCTYPE html>
@@ -212,6 +230,11 @@ func generateHTML(export BitwardenExport) string {
             font-style: italic;
         }
 
+        .date {
+            font-size: 11px;
+            color: #666;
+        }
+
         @media print {
             body {
                 background: white;
@@ -253,13 +276,47 @@ func generateHTML(export BitwardenExport) string {
         <table>
             <thead>
                 <tr>
-                    <th>Type</th>
-                    <th>Name</th>
-                    <th>Username</th>
-                    <th>Password</th>
-                    <th>URL</th>
-                    <th>Notes</th>
-                </tr>
+`)
+
+	// Generate table headers based on selected fields
+	if fields.Type {
+		sb.WriteString("                    <th>Type</th>\n")
+	}
+	if fields.Name {
+		sb.WriteString("                    <th>Name</th>\n")
+	}
+	if fields.Username {
+		sb.WriteString("                    <th>Username</th>\n")
+	}
+	if fields.Password {
+		sb.WriteString("                    <th>Password</th>\n")
+	}
+	if fields.URL {
+		sb.WriteString("                    <th>URL</th>\n")
+	}
+	if fields.Notes {
+		sb.WriteString("                    <th>Notes</th>\n")
+	}
+	if fields.TOTP {
+		sb.WriteString("                    <th>TOTP</th>\n")
+	}
+	if fields.Folder {
+		sb.WriteString("                    <th>Folder</th>\n")
+	}
+	if fields.Organization {
+		sb.WriteString("                    <th>Organization</th>\n")
+	}
+	if fields.CreationDate {
+		sb.WriteString("                    <th>Created</th>\n")
+	}
+	if fields.ModificationDate {
+		sb.WriteString("                    <th>Modified</th>\n")
+	}
+	if fields.PasswordRevision {
+		sb.WriteString("                    <th>Password Revision</th>\n")
+	}
+
+	sb.WriteString(`                </tr>
             </thead>
             <tbody>
 `)
@@ -268,68 +325,156 @@ func generateHTML(export BitwardenExport) string {
 		sb.WriteString("                <tr>\n")
 
 		// Type
-		sb.WriteString("                    <td>")
-		typeClass, typeName := getItemType(item.Type)
-		if item.Favorite {
-			sb.WriteString("<span class=\"favorite\">★</span> ")
+		if fields.Type {
+			sb.WriteString("                    <td>")
+			typeClass, typeName := getItemType(item.Type)
+			if fields.Favorite && item.Favorite {
+				sb.WriteString("<span class=\"favorite\">★</span> ")
+			}
+			sb.WriteString(fmt.Sprintf("<span class=\"item-type %s\">%s</span>", typeClass, typeName))
+			sb.WriteString("</td>\n")
 		}
-		sb.WriteString(fmt.Sprintf("<span class=\"item-type %s\">%s</span>", typeClass, typeName))
-		sb.WriteString("</td>\n")
 
 		// Name
-		sb.WriteString("                    <td><strong>")
-		sb.WriteString(html.EscapeString(item.Name))
-		sb.WriteString("</strong></td>\n")
+		if fields.Name {
+			sb.WriteString("                    <td><strong>")
+			sb.WriteString(html.EscapeString(item.Name))
+			sb.WriteString("</strong></td>\n")
+		}
 
 		// Username/Login
-		sb.WriteString("                    <td>")
-		username := getUsername(item)
-		if username != "" {
-			sb.WriteString(html.EscapeString(username))
-		} else {
-			sb.WriteString("<span class=\"empty\">-</span>")
+		if fields.Username {
+			sb.WriteString("                    <td>")
+			username := getUsername(item)
+			if username != "" {
+				sb.WriteString(html.EscapeString(username))
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
 		}
-		sb.WriteString("</td>\n")
 
 		// Password
-		sb.WriteString("                    <td>")
-		password := getPassword(item)
-		if password != "" {
-			sb.WriteString("<span class=\"password\">")
-			sb.WriteString(html.EscapeString(password))
-			sb.WriteString("</span>")
-		} else {
-			sb.WriteString("<span class=\"empty\">-</span>")
+		if fields.Password {
+			sb.WriteString("                    <td>")
+			password := getPassword(item)
+			if password != "" {
+				sb.WriteString("<span class=\"password\">")
+				sb.WriteString(html.EscapeString(password))
+				sb.WriteString("</span>")
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
 		}
-		sb.WriteString("</td>\n")
 
 		// URL
-		sb.WriteString("                    <td>")
-		urls := getURLs(item)
-		if len(urls) > 0 {
-			for i, url := range urls {
-				if i > 0 {
-					sb.WriteString("<br>")
+		if fields.URL {
+			sb.WriteString("                    <td>")
+			urls := getURLs(item)
+			if len(urls) > 0 {
+				for i, url := range urls {
+					if i > 0 {
+						sb.WriteString("<br>")
+					}
+					sb.WriteString(fmt.Sprintf("<a href=\"%s\" class=\"url\">%s</a>",
+						html.EscapeString(url), html.EscapeString(url)))
 				}
-				sb.WriteString(fmt.Sprintf("<a href=\"%s\" class=\"url\">%s</a>",
-					html.EscapeString(url), html.EscapeString(url)))
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
 			}
-		} else {
-			sb.WriteString("<span class=\"empty\">-</span>")
+			sb.WriteString("</td>\n")
 		}
-		sb.WriteString("</td>\n")
 
 		// Notes
-		sb.WriteString("                    <td>")
-		notes := getNotes(item)
-		if notes != "" {
-			sb.WriteString("<span class=\"notes\">")
-			sb.WriteString(html.EscapeString(notes))
-			sb.WriteString("</span>")
-		} else {
-			sb.WriteString("<span class=\"empty\">-</span>")
+		if fields.Notes {
+			sb.WriteString("                    <td>")
+			notes := getNotes(item)
+			if notes != "" {
+				sb.WriteString("<span class=\"notes\">")
+				sb.WriteString(html.EscapeString(notes))
+				sb.WriteString("</span>")
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
 		}
-		sb.WriteString("</td>\n")
+
+		// TOTP
+		if fields.TOTP {
+			sb.WriteString("                    <td>")
+			totp := getTOTP(item)
+			if totp != "" {
+				sb.WriteString("<span class=\"password\">")
+				sb.WriteString(html.EscapeString(totp))
+				sb.WriteString("</span>")
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
+		}
+
+		// Folder
+		if fields.Folder {
+			sb.WriteString("                    <td>")
+			if item.FolderID != nil && *item.FolderID != "" {
+				sb.WriteString(html.EscapeString(*item.FolderID))
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
+		}
+
+		// Organization
+		if fields.Organization {
+			sb.WriteString("                    <td>")
+			if item.OrganizationID != nil && *item.OrganizationID != "" {
+				sb.WriteString(html.EscapeString(*item.OrganizationID))
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
+		}
+
+		// Creation Date
+		if fields.CreationDate {
+			sb.WriteString("                    <td>")
+			if item.CreationDate != nil && *item.CreationDate != "" {
+				sb.WriteString("<span class=\"date\">")
+				sb.WriteString(formatDate(*item.CreationDate))
+				sb.WriteString("</span>")
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
+		}
+
+		// Modification Date
+		if fields.ModificationDate {
+			sb.WriteString("                    <td>")
+			if item.RevisionDate != nil && *item.RevisionDate != "" {
+				sb.WriteString("<span class=\"date\">")
+				sb.WriteString(formatDate(*item.RevisionDate))
+				sb.WriteString("</span>")
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
+		}
+
+		// Password Revision
+		if fields.PasswordRevision {
+			sb.WriteString("                    <td>")
+			passwordRevision := getPasswordRevisionDate(item)
+			if passwordRevision != "" {
+				sb.WriteString("<span class=\"date\">")
+				sb.WriteString(formatDate(passwordRevision))
+				sb.WriteString("</span>")
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
+		}
 
 		sb.WriteString("                </tr>\n")
 	}
@@ -460,4 +605,26 @@ func getNotes(item BitwardenItem) string {
 	}
 
 	return ""
+}
+
+func getTOTP(item BitwardenItem) string {
+	if item.Login != nil && item.Login.TOTP != nil {
+		return *item.Login.TOTP
+	}
+	return ""
+}
+
+func getPasswordRevisionDate(item BitwardenItem) string {
+	if item.Login != nil && item.Login.PasswordRevisionDate != nil {
+		return *item.Login.PasswordRevisionDate
+	}
+	return ""
+}
+
+func formatDate(dateStr string) string {
+	t, err := time.Parse(time.RFC3339, dateStr)
+	if err != nil {
+		return dateStr
+	}
+	return t.Format("2006-01-02 15:04")
 }

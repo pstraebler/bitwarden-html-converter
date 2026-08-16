@@ -14,7 +14,7 @@ import (
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Bitwarden HTML Converter")
-	myWindow.Resize(fyne.NewSize(600, 400))
+	myWindow.Resize(fyne.NewSize(700, 600))
 
 	var inputPath string
 	var outputPath string
@@ -22,6 +22,46 @@ func main() {
 	inputLabel := widget.NewLabel("No file selected")
 	outputLabel := widget.NewLabel("No destination selected")
 	statusLabel := widget.NewLabel("")
+
+	// Field selection checkboxes with defaults
+	checkType := widget.NewCheck("Type", nil)
+	checkType.Checked = true
+
+	checkName := widget.NewCheck("Name", nil)
+	checkName.Checked = true
+
+	checkUsername := widget.NewCheck("Username/Login", nil)
+	checkUsername.Checked = true
+
+	checkPassword := widget.NewCheck("Password", nil)
+	checkPassword.Checked = true
+
+	checkNotes := widget.NewCheck("Notes", nil)
+	checkNotes.Checked = true
+
+	checkURL := widget.NewCheck("URL", nil)
+	checkURL.Checked = false
+
+	checkFavorite := widget.NewCheck("Show Favorite Star", nil)
+	checkFavorite.Checked = false
+
+	checkTOTP := widget.NewCheck("TOTP", nil)
+	checkTOTP.Checked = false
+
+	checkFolder := widget.NewCheck("Folder", nil)
+	checkFolder.Checked = false
+
+	checkOrganization := widget.NewCheck("Organization", nil)
+	checkOrganization.Checked = false
+
+	checkCreationDate := widget.NewCheck("Creation Date", nil)
+	checkCreationDate.Checked = false
+
+	checkModificationDate := widget.NewCheck("Modification Date", nil)
+	checkModificationDate.Checked = false
+
+	checkPasswordRevision := widget.NewCheck("Password Revision Date", nil)
+	checkPasswordRevision.Checked = false
 
 	inputButton := widget.NewButton("Select JSON File", func() {
 		dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
@@ -66,8 +106,25 @@ func main() {
 			return
 		}
 
+		// Build ExportFields struct from checkboxes
+		fields := ExportFields{
+			Type:              checkType.Checked,
+			Name:              checkName.Checked,
+			Username:          checkUsername.Checked,
+			Password:          checkPassword.Checked,
+			Notes:             checkNotes.Checked,
+			URL:               checkURL.Checked,
+			Favorite:          checkFavorite.Checked,
+			TOTP:              checkTOTP.Checked,
+			Folder:            checkFolder.Checked,
+			Organization:      checkOrganization.Checked,
+			CreationDate:      checkCreationDate.Checked,
+			ModificationDate:  checkModificationDate.Checked,
+			PasswordRevision:  checkPasswordRevision.Checked,
+		}
+
 		statusLabel.SetText("Converting...")
-		err := ConvertBitwardenToHTML(inputPath, outputPath)
+		err := ConvertBitwardenToHTML(inputPath, outputPath, fields)
 		if err != nil {
 			statusLabel.SetText("Conversion error")
 			dialog.ShowError(err, myWindow)
@@ -81,6 +138,28 @@ func main() {
 		myApp.Quit()
 	})
 
+	// Group checkboxes into columns for better layout
+	leftColumn := container.NewVBox(
+		checkType,
+		checkName,
+		checkUsername,
+		checkPassword,
+		checkNotes,
+		checkURL,
+		checkFavorite,
+	)
+
+	rightColumn := container.NewVBox(
+		checkTOTP,
+		checkFolder,
+		checkOrganization,
+		checkCreationDate,
+		checkModificationDate,
+		checkPasswordRevision,
+	)
+
+	fieldsContainer := container.NewHBox(leftColumn, rightColumn)
+
 	content := container.NewVBox(
 		widget.NewLabel("Bitwarden JSON to HTML Converter"),
 		widget.NewSeparator(),
@@ -89,6 +168,9 @@ func main() {
 		widget.NewSeparator(),
 		outputButton,
 		outputLabel,
+		widget.NewSeparator(),
+		widget.NewLabel("Select fields to export:"),
+		fieldsContainer,
 		widget.NewSeparator(),
 		convertButton,
 		statusLabel,
