@@ -308,6 +308,33 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             height: 100%;
         }
 
+        .toggle-password-btn {
+            position: absolute;
+            top: 30px;
+            right: 80px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .toggle-password-btn:hover {
+            opacity: 1;
+        }
+
+        .toggle-password-btn svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .password.masked {
+            user-select: none;
+        }
+
         .controls-container {
             margin: 20px 0;
         }
@@ -424,6 +451,13 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
                 <rect x="6" y="14" width="12" height="8"></rect>
             </svg>
         </div>
+
+        <button class="toggle-password-btn" id="togglePasswordBtn" title="Toggle password visibility">
+            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#175ddc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        </button>
 
         <div class="controls-container">
             <div class="search-wrapper">
@@ -652,6 +686,41 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             const searchResults = document.getElementById('searchResults');
             const allRows = Array.from(tbody.querySelectorAll('tr'));
             const totalEntries = allRows.length;
+
+            // Password toggle functionality
+            const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+            const eyeIcon = document.getElementById('eyeIcon');
+            let passwordsVisible = true;
+
+            if (togglePasswordBtn) {
+                togglePasswordBtn.addEventListener('click', function() {
+                    passwordsVisible = !passwordsVisible;
+                    const passwordCells = document.querySelectorAll('.password');
+
+                    passwordCells.forEach(cell => {
+                        if (passwordsVisible) {
+                            cell.classList.remove('masked');
+                            if (cell.dataset.original) {
+                                cell.textContent = cell.dataset.original;
+                            }
+                        } else {
+                            if (!cell.dataset.original) {
+                                cell.dataset.original = cell.textContent;
+                            }
+                            const length = cell.textContent.length;
+                            cell.textContent = '•'.repeat(Math.min(length, 20));
+                            cell.classList.add('masked');
+                        }
+                    });
+
+                    // Update icon
+                    if (passwordsVisible) {
+                        eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+                    } else {
+                        eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+                    }
+                });
+            }
 
             // Search/Filter functionality
             searchInput.addEventListener('input', function() {
