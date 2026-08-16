@@ -175,6 +175,30 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             top: 0;
         }
 
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable:hover {
+            background: #1450bc;
+        }
+
+        th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.5;
+        }
+
+        th.sortable.asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        th.sortable.desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
         td {
             padding: 10px 8px;
             border-bottom: 1px solid #e0e0e0;
@@ -482,6 +506,66 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
 	sb.WriteString(`            </tbody>
         </table>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.querySelector('table');
+            const headers = table.querySelectorAll('th');
+            const tbody = table.querySelector('tbody');
+
+            headers.forEach((header, index) => {
+                // Don't make password column sortable
+                const headerText = header.textContent.trim();
+                if (headerText.toLowerCase().includes('password') && !headerText.toLowerCase().includes('revision')) {
+                    return;
+                }
+
+                header.classList.add('sortable');
+                let ascending = true;
+
+                header.addEventListener('click', function() {
+                    // Remove sort indicators from other headers
+                    headers.forEach(h => {
+                        h.classList.remove('asc', 'desc');
+                    });
+
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                    rows.sort((a, b) => {
+                        const aCell = a.children[index];
+                        const bCell = b.children[index];
+
+                        if (!aCell || !bCell) return 0;
+
+                        let aValue = aCell.textContent.trim();
+                        let bValue = bCell.textContent.trim();
+
+                        // Handle empty values
+                        if (aValue === '-') aValue = '';
+                        if (bValue === '-') bValue = '';
+
+                        // Try to parse as date
+                        const aDate = new Date(aValue);
+                        const bDate = new Date(bValue);
+
+                        if (!isNaN(aDate) && !isNaN(bDate) && aValue.match(/\d{4}-\d{2}-\d{2}/)) {
+                            return ascending ? aDate - bDate : bDate - aDate;
+                        }
+
+                        // Compare as strings (case insensitive)
+                        const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+                        return ascending ? comparison : -comparison;
+                    });
+
+                    // Update table
+                    rows.forEach(row => tbody.appendChild(row));
+
+                    // Update sort indicator
+                    header.classList.add(ascending ? 'asc' : 'desc');
+                    ascending = !ascending;
+                });
+            });
+        });
+    </script>
 </body>
 </html>`)
 
