@@ -13,7 +13,6 @@ import (
 
 func main() {
 	myApp := app.New()
-	myApp.SetIcon(getAppIcon())
 	myWindow := myApp.NewWindow("Bitwarden HTML Converter")
 	myWindow.Resize(fyne.NewSize(700, 600))
 

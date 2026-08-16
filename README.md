@@ -1,9 +1,5 @@
 [![Build and Release](https://github.com/pstraebler/bitwarden-html-converter/actions/workflows/build.yml/badge.svg)](https://github.com/pstraebler/bitwarden-html-converter/actions/workflows/build.yml)
 
-<p align="center">
-  <img src="icon-256.png" alt="Bitwarden HTML Converter" width="128" height="128">
-</p>
-
 # Bitwarden HTML Converter
 
 Lightweight cross-platform application to convert Bitwarden JSON exports into printable HTML files.
