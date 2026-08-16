@@ -207,8 +207,12 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             vertical-align: top;
         }
 
-        tr:hover {
+        tr:nth-child(even) {
             background: #f8f9fa;
+        }
+
+        tr:hover {
+            background: #e3f2fd;
         }
 
         .item-type {
