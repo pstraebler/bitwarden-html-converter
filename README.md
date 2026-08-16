@@ -2,7 +2,7 @@
 
 # Bitwarden HTML Converter
 
-Lightweight cross-platform application to convert Bitwarden JSON exports into printable HTML files. Fully offline and secure.
+Lightweight cross-platform application to convert Bitwarden JSON exports into a printable HTML file. Fully offline and secure.
 
 ## Features
 
