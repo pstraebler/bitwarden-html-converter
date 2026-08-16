@@ -259,6 +259,34 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             color: #666;
         }
 
+        .search-container {
+            margin: 20px 0;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus {
+            border-color: #175ddc;
+        }
+
+        .search-info {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        tr.hidden {
+            display: none;
+        }
+
         @media print {
             body {
                 background: white;
@@ -295,6 +323,13 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
         <div class="export-info">
             Generated on ` + time.Now().Format("01/02/2006 at 3:04:05 PM") + `<br>
             Number of entries: ` + fmt.Sprintf("%d", len(export.Items)) + `
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-box" id="searchInput" placeholder="Search by name, username, URL, notes...">
+            <div class="search-info">
+                <span id="searchResults"></span>
+            </div>
         </div>
 
         <table>
@@ -511,7 +546,54 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             const table = document.querySelector('table');
             const headers = table.querySelectorAll('th');
             const tbody = table.querySelector('tbody');
+            const searchInput = document.getElementById('searchInput');
+            const searchResults = document.getElementById('searchResults');
+            const allRows = Array.from(tbody.querySelectorAll('tr'));
+            const totalEntries = allRows.length;
 
+            // Search/Filter functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                let visibleCount = 0;
+
+                allRows.forEach(row => {
+                    if (searchTerm === '') {
+                        row.classList.remove('hidden');
+                        visibleCount++;
+                    } else {
+                        const text = row.textContent.toLowerCase();
+                        // Exclude password column from search
+                        const cells = Array.from(row.children);
+                        const passwordColumnIndex = Array.from(headers).findIndex(h =>
+                            h.textContent.toLowerCase().includes('password') &&
+                            !h.textContent.toLowerCase().includes('revision')
+                        );
+
+                        let searchableText = '';
+                        cells.forEach((cell, index) => {
+                            if (index !== passwordColumnIndex) {
+                                searchableText += cell.textContent.toLowerCase() + ' ';
+                            }
+                        });
+
+                        if (searchableText.includes(searchTerm)) {
+                            row.classList.remove('hidden');
+                            visibleCount++;
+                        } else {
+                            row.classList.add('hidden');
+                        }
+                    }
+                });
+
+                // Update search results info
+                if (searchTerm === '') {
+                    searchResults.textContent = '';
+                } else {
+                    searchResults.textContent = 'Showing ' + visibleCount + ' of ' + totalEntries + ' entries';
+                }
+            });
+
+            // Sorting functionality
             headers.forEach((header, index) => {
                 // Don't make password column sortable
                 const headerText = header.textContent.trim();
