@@ -77,6 +77,7 @@ Install [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) or use [MSYS2](https://ww
 git clone <repository-url>
 cd bitwarden-html-converter
 go mod download
+go mod tidy
 go build -o bitwarden-html-converter
 ```
 
