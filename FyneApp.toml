@@ -1,0 +1,6 @@
+[Details]
+Icon = "icon.png"
+Name = "Bitwarden HTML Converter"
+ID = "com.bitwarden.htmlconverter"
+Version = "1.0.0"
+Build = 1
