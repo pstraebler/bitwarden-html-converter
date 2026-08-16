@@ -32,11 +32,11 @@ jobs:
             goos: windows
             goarch: amd64
             output: bitwarden-html-converter-windows-amd64.exe
-          #- os: macos-amd64
-          #  runs-on: macos-13
-          #  goos: darwin
-          #  goarch: amd64
-          #  output: bitwarden-html-converter-macos-amd64
+          - os: macos-amd64
+            runs-on: macos-15-intel
+            goos: darwin
+            goarch: amd64
+            output: bitwarden-html-converter-macos-amd64
           - os: macos-arm64
             runs-on: macos-latest
             goos: darwin
