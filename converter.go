@@ -144,6 +144,7 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
         }
 
         h1 {
@@ -283,6 +284,34 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             color: #666;
         }
 
+        .print-icon {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .print-icon:hover {
+            opacity: 1;
+        }
+
+        .print-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls-container {
+            margin: 20px 0;
+        }
+
+        .search-wrapper {
+            width: 100%;
+        }
+
         tr.hidden {
             display: none;
         }
@@ -296,10 +325,33 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             .container {
                 box-shadow: none;
                 padding: 0;
+                max-width: 100%;
+            }
+
+            .search-container,
+            .controls-container,
+            .print-button,
+            .print-icon {
+                display: none;
+            }
+
+            .export-info {
+                margin-bottom: 10px;
+                font-size: 10px;
+            }
+
+            h1 {
+                font-size: 18px;
+                margin-bottom: 5px;
             }
 
             table {
                 page-break-inside: auto;
+                font-size: 9px;
+            }
+
+            thead {
+                display: table-header-group;
             }
 
             tr {
@@ -309,10 +361,46 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
 
             th {
                 position: static;
+                padding: 6px 4px;
+                font-size: 9px;
+            }
+
+            td {
+                padding: 4px 4px;
+                font-size: 9px;
             }
 
             tr:hover {
                 background: transparent;
+            }
+
+            .password,
+            .notes {
+                font-size: 8px;
+                max-width: 150px;
+            }
+
+            .item-type {
+                font-size: 8px;
+                padding: 2px 4px;
+            }
+
+            .date {
+                font-size: 8px;
+            }
+
+            .url {
+                font-size: 8px;
+                word-break: break-all;
+            }
+
+            /* Hide rows that are filtered out */
+            tr.hidden {
+                display: none;
+            }
+
+            @page {
+                margin: 0.5cm;
             }
         }
     </style>
@@ -325,10 +413,20 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             Number of entries: ` + fmt.Sprintf("%d", len(export.Items)) + `
         </div>
 
-        <div class="search-container">
-            <input type="text" class="search-box" id="searchInput" placeholder="Search by name, username, URL, notes...">
-            <div class="search-info">
-                <span id="searchResults"></span>
+        <div class="print-icon" onclick="window.print()" title="Print">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#175ddc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+        </div>
+
+        <div class="controls-container">
+            <div class="search-wrapper">
+                <input type="text" class="search-box" id="searchInput" placeholder="Search by name, username, URL, notes...">
+                <div class="search-info">
+                    <span id="searchResults"></span>
+                </div>
             </div>
         </div>
 
