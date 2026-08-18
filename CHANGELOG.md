@@ -1,0 +1,20 @@
+# Changelog
+
+## [Unreleased]
+
+### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+## [1.0] - 2026-08-16
+
+### Added
+- First public version.
+
+[Unreleased]: https://github.com/pstraebler/bitwarden-html-converter/compare/v1.0...HEAD
+[1.0]: https://github.com/pstraebler/bitwarden-html-converter/releases/tag/v1.0
