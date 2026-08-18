@@ -5,13 +5,20 @@ import (
 	"fmt"
 	"html"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
 
 type BitwardenExport struct {
-	Encrypted bool            `json:"encrypted"`
-	Items     []BitwardenItem `json:"items"`
+	Encrypted bool              `json:"encrypted"`
+	Items     []BitwardenItem   `json:"items"`
+	Folders   []BitwardenFolder `json:"folders"`
+}
+
+type BitwardenFolder struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type BitwardenItem struct {
@@ -22,6 +29,7 @@ type BitwardenItem struct {
 	Name             string              `json:"name"`
 	Notes            *string             `json:"notes"`
 	Favorite         bool                `json:"favorite"`
+	Fields           []BitwardenField    `json:"fields"`
 	Login            *BitwardenLogin     `json:"login"`
 	Card             *BitwardenCard      `json:"card"`
 	Identity         *BitwardenIdentity  `json:"identity"`
@@ -75,6 +83,20 @@ type BitwardenSecureNote struct {
 	Type int `json:"type"`
 }
 
+type BitwardenField struct {
+	Name  string  `json:"name"`
+	Value *string `json:"value"`
+	Type  int     `json:"type"`
+}
+
+type GroupingMode int
+
+const (
+	GroupNone GroupingMode = iota
+	GroupByType
+	GroupByFolder
+)
+
 type ExportFields struct {
 	Type              bool
 	Name              bool
@@ -89,9 +111,15 @@ type ExportFields struct {
 	PasswordRevision  bool
 	Folder            bool
 	Organization      bool
+	CustomFields      bool
 }
 
-func ConvertBitwardenToHTML(inputPath, outputPath string, fields ExportFields) error {
+type ExportOptions struct {
+	Fields   ExportFields
+	Grouping GroupingMode
+}
+
+func ConvertBitwardenToHTML(inputPath, outputPath string, options ExportOptions) error {
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("error reading file: %w", err)
@@ -106,7 +134,7 @@ func ConvertBitwardenToHTML(inputPath, outputPath string, fields ExportFields) e
 		return fmt.Errorf("file is encrypted, please export as unencrypted JSON")
 	}
 
-	htmlContent := generateHTML(export, fields)
+	htmlContent := generateHTML(export, options)
 
 	if err := os.WriteFile(outputPath, []byte(htmlContent), 0644); err != nil {
 		return fmt.Errorf("error writing HTML file: %w", err)
@@ -115,8 +143,15 @@ func ConvertBitwardenToHTML(inputPath, outputPath string, fields ExportFields) e
 	return nil
 }
 
-func generateHTML(export BitwardenExport, fields ExportFields) string {
+func generateHTML(export BitwardenExport, options ExportOptions) string {
 	var sb strings.Builder
+	fields := options.Fields
+
+	// Create folder map for resolving folder names
+	folderMap := make(map[string]string)
+	for _, folder := range export.Folders {
+		folderMap[folder.ID] = folder.Name
+	}
 
 	sb.WriteString(`<!DOCTYPE html>
 <html lang="en">
@@ -157,6 +192,57 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
             color: #666;
             margin-bottom: 30px;
             font-size: 14px;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+
+        .section-header:hover {
+            background: #e9ecef;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            color: #175ddc;
+            margin: 0;
+        }
+
+        .section-toggle {
+            font-size: 20px;
+            font-weight: bold;
+            color: #175ddc;
+            transition: transform 0.2s;
+        }
+
+        .section-header.collapsed .section-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            display: block;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .section-content.collapsed {
+            display: none;
+        }
+
+        .section-count {
+            font-size: 14px;
+            color: #666;
+            margin-left: 10px;
         }
 
         table {
@@ -510,181 +596,145 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
 	if fields.PasswordRevision {
 		sb.WriteString("                    <th>Password Revision</th>\n")
 	}
+	if fields.CustomFields {
+		sb.WriteString("                    <th>Custom Fields</th>\n")
+	}
 
 	sb.WriteString(`                </tr>
             </thead>
             <tbody>
 `)
 
-	for _, item := range export.Items {
-		sb.WriteString("                <tr>\n")
-
-		// Type
-		if fields.Type {
-			sb.WriteString("                    <td>")
-			typeClass, typeName := getItemType(item.Type)
-			if fields.Favorite && item.Favorite {
-				sb.WriteString("<span class=\"favorite\">★</span> ")
+	// Generate rows based on grouping mode
+	switch options.Grouping {
+	case GroupByType:
+		sb.WriteString(`            </tbody>
+        </table>
+`)
+		groups := groupItemsByType(export.Items)
+		groupNames := []string{"Login", "Note", "Card", "Identity", "Other"}
+		for _, groupName := range groupNames {
+			items, exists := groups[groupName]
+			if !exists || len(items) == 0 {
+				continue
 			}
-			sb.WriteString(fmt.Sprintf("<span class=\"item-type %s\">%s</span>", typeClass, typeName))
-			sb.WriteString("</td>\n")
+			sb.WriteString(fmt.Sprintf(`        <div class="section-header" onclick="toggleSection(this)">
+            <div>
+                <h2>%s<span class="section-count">(%d entries)</span></h2>
+            </div>
+            <span class="section-toggle">▼</span>
+        </div>
+        <div class="section-content">
+        <table>
+            <thead>
+                <tr>
+`, groupName, len(items)))
+			// Repeat headers for grouped tables
+			generateTableHeaders(&sb, fields)
+			sb.WriteString(`                </tr>
+            </thead>
+            <tbody>
+`)
+			for _, item := range items {
+				generateItemRow(&sb, item, fields, folderMap)
+			}
+			sb.WriteString(`            </tbody>
+        </table>
+        </div>
+`)
 		}
 
-		// Name
-		if fields.Name {
-			sb.WriteString("                    <td><strong>")
-			sb.WriteString(html.EscapeString(item.Name))
-			sb.WriteString("</strong></td>\n")
+	case GroupByFolder:
+		sb.WriteString(`            </tbody>
+        </table>
+`)
+		groups := groupItemsByFolder(export.Items, export.Folders)
+		var folderNames []string
+		for folderName := range groups {
+			folderNames = append(folderNames, folderName)
 		}
-
-		// Username/Login
-		if fields.Username {
-			sb.WriteString("                    <td>")
-			username := getUsername(item)
-			if username != "" {
-				sb.WriteString(html.EscapeString(username))
+		// Sort: "No Folder" first, then alphabetically
+		var sortedNames []string
+		hasNoFolder := false
+		for _, name := range folderNames {
+			if name == "No Folder" {
+				hasNoFolder = true
 			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
+				sortedNames = append(sortedNames, name)
 			}
-			sb.WriteString("</td>\n")
+		}
+		sort.Strings(sortedNames)
+		if hasNoFolder {
+			folderNames = append([]string{"No Folder"}, sortedNames...)
+		} else {
+			folderNames = sortedNames
 		}
 
-		// Password
-		if fields.Password {
-			sb.WriteString("                    <td>")
-			password := getPassword(item)
-			if password != "" {
-				sb.WriteString("<span class=\"password\">")
-				sb.WriteString(html.EscapeString(password))
-				sb.WriteString("</span>")
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
+		for _, folderName := range folderNames {
+			items := groups[folderName]
+			sb.WriteString(fmt.Sprintf(`        <div class="section-header" onclick="toggleSection(this)">
+            <div>
+                <h2>📁 %s<span class="section-count">(%d entries)</span></h2>
+            </div>
+            <span class="section-toggle">▼</span>
+        </div>
+        <div class="section-content">
+        <table>
+            <thead>
+                <tr>
+`, html.EscapeString(folderName), len(items)))
+			generateTableHeaders(&sb, fields)
+			sb.WriteString(`                </tr>
+            </thead>
+            <tbody>
+`)
+			for _, item := range items {
+				generateItemRow(&sb, item, fields, folderMap)
 			}
-			sb.WriteString("</td>\n")
+			sb.WriteString(`            </tbody>
+        </table>
+        </div>
+`)
 		}
 
-		// URL
-		if fields.URL {
-			sb.WriteString("                    <td>")
-			urls := getURLs(item)
-			if len(urls) > 0 {
-				for i, url := range urls {
-					if i > 0 {
-						sb.WriteString("<br>")
-					}
-					sb.WriteString(fmt.Sprintf("<a href=\"%s\" class=\"url\">%s</a>",
-						html.EscapeString(url), html.EscapeString(url)))
-				}
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
-			}
-			sb.WriteString("</td>\n")
+	default:
+		// No grouping - original behavior
+		for _, item := range export.Items {
+			generateItemRow(&sb, item, fields, folderMap)
 		}
-
-		// Notes
-		if fields.Notes {
-			sb.WriteString("                    <td>")
-			notes := getNotes(item)
-			if notes != "" {
-				sb.WriteString("<span class=\"notes\">")
-				sb.WriteString(html.EscapeString(notes))
-				sb.WriteString("</span>")
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
-			}
-			sb.WriteString("</td>\n")
-		}
-
-		// TOTP
-		if fields.TOTP {
-			sb.WriteString("                    <td>")
-			totp := getTOTP(item)
-			if totp != "" {
-				sb.WriteString("<span class=\"password\">")
-				sb.WriteString(html.EscapeString(totp))
-				sb.WriteString("</span>")
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
-			}
-			sb.WriteString("</td>\n")
-		}
-
-		// Folder
-		if fields.Folder {
-			sb.WriteString("                    <td>")
-			if item.FolderID != nil && *item.FolderID != "" {
-				sb.WriteString(html.EscapeString(*item.FolderID))
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
-			}
-			sb.WriteString("</td>\n")
-		}
-
-		// Organization
-		if fields.Organization {
-			sb.WriteString("                    <td>")
-			if item.OrganizationID != nil && *item.OrganizationID != "" {
-				sb.WriteString(html.EscapeString(*item.OrganizationID))
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
-			}
-			sb.WriteString("</td>\n")
-		}
-
-		// Creation Date
-		if fields.CreationDate {
-			sb.WriteString("                    <td>")
-			if item.CreationDate != nil && *item.CreationDate != "" {
-				sb.WriteString("<span class=\"date\">")
-				sb.WriteString(formatDate(*item.CreationDate))
-				sb.WriteString("</span>")
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
-			}
-			sb.WriteString("</td>\n")
-		}
-
-		// Modification Date
-		if fields.ModificationDate {
-			sb.WriteString("                    <td>")
-			if item.RevisionDate != nil && *item.RevisionDate != "" {
-				sb.WriteString("<span class=\"date\">")
-				sb.WriteString(formatDate(*item.RevisionDate))
-				sb.WriteString("</span>")
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
-			}
-			sb.WriteString("</td>\n")
-		}
-
-		// Password Revision
-		if fields.PasswordRevision {
-			sb.WriteString("                    <td>")
-			passwordRevision := getPasswordRevisionDate(item)
-			if passwordRevision != "" {
-				sb.WriteString("<span class=\"date\">")
-				sb.WriteString(formatDate(passwordRevision))
-				sb.WriteString("</span>")
-			} else {
-				sb.WriteString("<span class=\"empty\">-</span>")
-			}
-			sb.WriteString("</td>\n")
-		}
-
-		sb.WriteString("                </tr>\n")
+		sb.WriteString(`            </tbody>
+        </table>
+`)
 	}
 
-	sb.WriteString(`            </tbody>
-        </table>
-    </div>
+	sb.WriteString(`    </div>
     <script>
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+
+            if (!content || !content.classList.contains('section-content')) {
+                console.error('Section content not found');
+                return;
+            }
+
+            // Simple toggle with display
+            header.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            const table = document.querySelector('table');
-            const headers = table.querySelectorAll('th');
-            const tbody = table.querySelector('tbody');
+
+            const tables = document.querySelectorAll('table');
             const searchInput = document.getElementById('searchInput');
             const searchResults = document.getElementById('searchResults');
-            const allRows = Array.from(tbody.querySelectorAll('tr'));
+
+            let allRows = [];
+            tables.forEach(table => {
+                const tbody = table.querySelector('tbody');
+                if (tbody) {
+                    allRows = allRows.concat(Array.from(tbody.querySelectorAll('tr')));
+                }
+            });
             const totalEntries = allRows.length;
 
             // Password toggle functionality
@@ -732,21 +782,7 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
                         row.classList.remove('hidden');
                         visibleCount++;
                     } else {
-                        const text = row.textContent.toLowerCase();
-                        // Exclude password column from search
-                        const cells = Array.from(row.children);
-                        const passwordColumnIndex = Array.from(headers).findIndex(h =>
-                            h.textContent.toLowerCase().includes('password') &&
-                            !h.textContent.toLowerCase().includes('revision')
-                        );
-
-                        let searchableText = '';
-                        cells.forEach((cell, index) => {
-                            if (index !== passwordColumnIndex) {
-                                searchableText += cell.textContent.toLowerCase() + ' ';
-                            }
-                        });
-
+                        const searchableText = row.textContent.toLowerCase();
                         if (searchableText.includes(searchTerm)) {
                             row.classList.remove('hidden');
                             visibleCount++;
@@ -764,24 +800,29 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
                 }
             });
 
-            // Sorting functionality
-            headers.forEach((header, index) => {
-                // Don't make password column sortable
-                const headerText = header.textContent.trim();
-                if (headerText.toLowerCase().includes('password') && !headerText.toLowerCase().includes('revision')) {
-                    return;
-                }
+            // Sorting functionality for each table
+            tables.forEach(table => {
+                const headers = table.querySelectorAll('th');
+                const tbody = table.querySelector('tbody');
+                if (!tbody) return;
 
-                header.classList.add('sortable');
-                let ascending = true;
+                headers.forEach((header, index) => {
+                    // Don't make password column sortable
+                    const headerText = header.textContent.trim();
+                    if (headerText.toLowerCase().includes('password') && !headerText.toLowerCase().includes('revision')) {
+                        return;
+                    }
 
-                header.addEventListener('click', function() {
-                    // Remove sort indicators from other headers
-                    headers.forEach(h => {
-                        h.classList.remove('asc', 'desc');
-                    });
+                    header.classList.add('sortable');
+                    let ascending = true;
 
-                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    header.addEventListener('click', function() {
+                        // Remove sort indicators from other headers
+                        headers.forEach(h => {
+                            h.classList.remove('asc', 'desc');
+                        });
+
+                        const rows = Array.from(tbody.querySelectorAll('tr'));
 
                     rows.sort((a, b) => {
                         const aCell = a.children[index];
@@ -815,6 +856,7 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
                     // Update sort indicator
                     header.classList.add(ascending ? 'asc' : 'desc');
                     ascending = !ascending;
+                    });
                 });
             });
         });
@@ -964,4 +1006,274 @@ func formatDate(dateStr string) string {
 		return dateStr
 	}
 	return t.Format("2006-01-02 15:04")
+}
+
+func getCustomFields(item BitwardenItem) string {
+	if len(item.Fields) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for _, field := range item.Fields {
+		if field.Value != nil && *field.Value != "" {
+			fieldType := ""
+			switch field.Type {
+			case 1:
+				fieldType = " (hidden)"
+			case 2:
+				fieldType = " (boolean)"
+			}
+			parts = append(parts, fmt.Sprintf("%s: %s%s", field.Name, *field.Value, fieldType))
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
+func generateTableHeaders(sb *strings.Builder, fields ExportFields) {
+	if fields.Type {
+		sb.WriteString("                    <th>Type</th>\n")
+	}
+	if fields.Name {
+		sb.WriteString("                    <th>Name</th>\n")
+	}
+	if fields.Username {
+		sb.WriteString("                    <th>Username</th>\n")
+	}
+	if fields.Password {
+		sb.WriteString("                    <th>Password</th>\n")
+	}
+	if fields.URL {
+		sb.WriteString("                    <th>URL</th>\n")
+	}
+	if fields.Notes {
+		sb.WriteString("                    <th>Notes</th>\n")
+	}
+	if fields.TOTP {
+		sb.WriteString("                    <th>TOTP</th>\n")
+	}
+	if fields.Folder {
+		sb.WriteString("                    <th>Folder</th>\n")
+	}
+	if fields.Organization {
+		sb.WriteString("                    <th>Organization</th>\n")
+	}
+	if fields.CreationDate {
+		sb.WriteString("                    <th>Created</th>\n")
+	}
+	if fields.ModificationDate {
+		sb.WriteString("                    <th>Modified</th>\n")
+	}
+	if fields.PasswordRevision {
+		sb.WriteString("                    <th>Password Revision</th>\n")
+	}
+	if fields.CustomFields {
+		sb.WriteString("                    <th>Custom Fields</th>\n")
+	}
+}
+
+func groupItemsByType(items []BitwardenItem) map[string][]BitwardenItem {
+	groups := make(map[string][]BitwardenItem)
+	for _, item := range items {
+		_, typeName := getItemType(item.Type)
+		groups[typeName] = append(groups[typeName], item)
+	}
+	return groups
+}
+
+func groupItemsByFolder(items []BitwardenItem, folders []BitwardenFolder) map[string][]BitwardenItem {
+	// Create a map for quick folder name lookup
+	folderMap := make(map[string]string)
+	for _, folder := range folders {
+		folderMap[folder.ID] = folder.Name
+	}
+
+	groups := make(map[string][]BitwardenItem)
+	for _, item := range items {
+		folderName := "No Folder"
+		if item.FolderID != nil && *item.FolderID != "" {
+			if name, exists := folderMap[*item.FolderID]; exists {
+				folderName = name
+			} else {
+				folderName = *item.FolderID // Fallback to ID if name not found
+			}
+		}
+		groups[folderName] = append(groups[folderName], item)
+	}
+	return groups
+}
+
+func generateItemRow(sb *strings.Builder, item BitwardenItem, fields ExportFields, folderMap map[string]string) {
+	sb.WriteString("                <tr>\n")
+
+	// Type
+	if fields.Type {
+		sb.WriteString("                    <td>")
+		typeClass, typeName := getItemType(item.Type)
+		if fields.Favorite && item.Favorite {
+			sb.WriteString("<span class=\"favorite\">★</span> ")
+		}
+		sb.WriteString(fmt.Sprintf("<span class=\"item-type %s\">%s</span>", typeClass, typeName))
+		sb.WriteString("</td>\n")
+	}
+
+	// Name
+	if fields.Name {
+		sb.WriteString("                    <td><strong>")
+		sb.WriteString(html.EscapeString(item.Name))
+		sb.WriteString("</strong></td>\n")
+	}
+
+	// Username/Login
+	if fields.Username {
+		sb.WriteString("                    <td>")
+		username := getUsername(item)
+		if username != "" {
+			sb.WriteString(html.EscapeString(username))
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// Password
+	if fields.Password {
+		sb.WriteString("                    <td>")
+		password := getPassword(item)
+		if password != "" {
+			sb.WriteString("<span class=\"password\">")
+			sb.WriteString(html.EscapeString(password))
+			sb.WriteString("</span>")
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// URL
+	if fields.URL {
+		sb.WriteString("                    <td>")
+		urls := getURLs(item)
+		if len(urls) > 0 {
+			for i, url := range urls {
+				if i > 0 {
+					sb.WriteString("<br>")
+				}
+				sb.WriteString(fmt.Sprintf("<a href=\"%s\" class=\"url\">%s</a>",
+					html.EscapeString(url), html.EscapeString(url)))
+			}
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// Notes
+	if fields.Notes {
+		sb.WriteString("                    <td>")
+		notes := getNotes(item)
+		if notes != "" {
+			sb.WriteString("<span class=\"notes\">")
+			sb.WriteString(html.EscapeString(notes))
+			sb.WriteString("</span>")
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// TOTP
+	if fields.TOTP {
+		sb.WriteString("                    <td>")
+		totp := getTOTP(item)
+		if totp != "" {
+			sb.WriteString("<span class=\"password\">")
+			sb.WriteString(html.EscapeString(totp))
+			sb.WriteString("</span>")
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// Folder
+	if fields.Folder {
+		sb.WriteString("                    <td>")
+		if item.FolderID != nil && *item.FolderID != "" {
+			folderName := *item.FolderID
+			if name, exists := folderMap[*item.FolderID]; exists {
+				folderName = name
+			}
+			sb.WriteString(html.EscapeString(folderName))
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// Organization
+	if fields.Organization {
+		sb.WriteString("                    <td>")
+		if item.OrganizationID != nil && *item.OrganizationID != "" {
+			sb.WriteString(html.EscapeString(*item.OrganizationID))
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// Creation Date
+	if fields.CreationDate {
+		sb.WriteString("                    <td>")
+		if item.CreationDate != nil && *item.CreationDate != "" {
+			sb.WriteString("<span class=\"date\">")
+			sb.WriteString(formatDate(*item.CreationDate))
+			sb.WriteString("</span>")
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// Modification Date
+	if fields.ModificationDate {
+		sb.WriteString("                    <td>")
+		if item.RevisionDate != nil && *item.RevisionDate != "" {
+			sb.WriteString("<span class=\"date\">")
+			sb.WriteString(formatDate(*item.RevisionDate))
+			sb.WriteString("</span>")
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// Password Revision
+	if fields.PasswordRevision {
+		sb.WriteString("                    <td>")
+		passwordRevision := getPasswordRevisionDate(item)
+		if passwordRevision != "" {
+			sb.WriteString("<span class=\"date\">")
+			sb.WriteString(formatDate(passwordRevision))
+			sb.WriteString("</span>")
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	// Custom Fields
+	if fields.CustomFields {
+		sb.WriteString("                    <td>")
+		customFields := getCustomFields(item)
+		if customFields != "" {
+			sb.WriteString("<span class=\"notes\">")
+			sb.WriteString(html.EscapeString(customFields))
+			sb.WriteString("</span>")
+		} else {
+			sb.WriteString("<span class=\"empty\">-</span>")
+		}
+		sb.WriteString("</td>\n")
+	}
+
+	sb.WriteString("                </tr>\n")
 }
