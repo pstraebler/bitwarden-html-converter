@@ -40,6 +40,28 @@ chmod +x bitwarden-html-converter-*
 4. Click "Convert"
 5. Open the generated HTML file in your browser to print it
 
+### macOS note
+
+On macOS, the app may be blocked by Gatekeeper if it is not signed. You can allow it in two ways:
+
+#### Option 1: terminal
+
+```bash
+xattr -d com.apple.quarantine bitwarden-html-converter-macos-arm64
+```
+
+If you are using the Intel build, replace the filename accordingly.
+
+#### Option 2: System Settings
+
+1. Open **System Settings**
+2. Go to **Privacy & Security**
+3. Scroll down and look for a message saying that the app was blocked
+4. Click **Open Anyway**
+5. Confirm the warning to allow the application to run
+
+After that, try launching the app again.
+
 ## Export from Bitwarden
 
 To get a JSON file from Bitwarden:
