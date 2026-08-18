@@ -66,6 +66,11 @@ func main() {
 	checkCustomFields := widget.NewCheck("Custom Fields", nil)
 	checkCustomFields.Checked = false
 
+	// Grouping options
+	groupingLabel := widget.NewLabel("Group entries by:")
+	groupingSelect := widget.NewSelect([]string{"None", "Type", "Folder"}, nil)
+	groupingSelect.SetSelected("None")
+
 	inputButton := widget.NewButton("Select JSON File", func() {
 		dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
@@ -127,8 +132,24 @@ func main() {
 			CustomFields:      checkCustomFields.Checked,
 		}
 
+		// Determine grouping mode
+		var grouping GroupingMode
+		switch groupingSelect.Selected {
+		case "Type":
+			grouping = GroupByType
+		case "Folder":
+			grouping = GroupByFolder
+		default:
+			grouping = GroupNone
+		}
+
+		options := ExportOptions{
+			Fields:   fields,
+			Grouping: grouping,
+		}
+
 		statusLabel.SetText("Converting...")
-		err := ConvertBitwardenToHTML(inputPath, outputPath, fields)
+		err := ConvertBitwardenToHTML(inputPath, outputPath, options)
 		if err != nil {
 			statusLabel.SetText("Conversion error")
 			dialog.ShowError(err, myWindow)
@@ -176,6 +197,9 @@ func main() {
 		widget.NewSeparator(),
 		widget.NewLabel("Select fields to export:"),
 		fieldsContainer,
+		widget.NewSeparator(),
+		groupingLabel,
+		groupingSelect,
 		widget.NewSeparator(),
 		convertButton,
 		statusLabel,

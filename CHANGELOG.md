@@ -4,6 +4,7 @@
 
 ### Added
 - add custom fields support
+- add section : export by type / folder
 
 ### Changed
 - 
