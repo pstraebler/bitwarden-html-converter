@@ -22,6 +22,7 @@ type BitwardenItem struct {
 	Name             string              `json:"name"`
 	Notes            *string             `json:"notes"`
 	Favorite         bool                `json:"favorite"`
+	Fields           []BitwardenField    `json:"fields"`
 	Login            *BitwardenLogin     `json:"login"`
 	Card             *BitwardenCard      `json:"card"`
 	Identity         *BitwardenIdentity  `json:"identity"`
@@ -75,6 +76,12 @@ type BitwardenSecureNote struct {
 	Type int `json:"type"`
 }
 
+type BitwardenField struct {
+	Name  string  `json:"name"`
+	Value *string `json:"value"`
+	Type  int     `json:"type"`
+}
+
 type ExportFields struct {
 	Type              bool
 	Name              bool
@@ -89,6 +96,7 @@ type ExportFields struct {
 	PasswordRevision  bool
 	Folder            bool
 	Organization      bool
+	CustomFields      bool
 }
 
 func ConvertBitwardenToHTML(inputPath, outputPath string, fields ExportFields) error {
@@ -510,6 +518,9 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
 	if fields.PasswordRevision {
 		sb.WriteString("                    <th>Password Revision</th>\n")
 	}
+	if fields.CustomFields {
+		sb.WriteString("                    <th>Custom Fields</th>\n")
+	}
 
 	sb.WriteString(`                </tr>
             </thead>
@@ -664,6 +675,20 @@ func generateHTML(export BitwardenExport, fields ExportFields) string {
 			if passwordRevision != "" {
 				sb.WriteString("<span class=\"date\">")
 				sb.WriteString(formatDate(passwordRevision))
+				sb.WriteString("</span>")
+			} else {
+				sb.WriteString("<span class=\"empty\">-</span>")
+			}
+			sb.WriteString("</td>\n")
+		}
+
+		// Custom Fields
+		if fields.CustomFields {
+			sb.WriteString("                    <td>")
+			customFields := getCustomFields(item)
+			if customFields != "" {
+				sb.WriteString("<span class=\"notes\">")
+				sb.WriteString(html.EscapeString(customFields))
 				sb.WriteString("</span>")
 			} else {
 				sb.WriteString("<span class=\"empty\">-</span>")
@@ -964,4 +989,25 @@ func formatDate(dateStr string) string {
 		return dateStr
 	}
 	return t.Format("2006-01-02 15:04")
+}
+
+func getCustomFields(item BitwardenItem) string {
+	if len(item.Fields) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for _, field := range item.Fields {
+		if field.Value != nil && *field.Value != "" {
+			fieldType := ""
+			switch field.Type {
+			case 1:
+				fieldType = " (hidden)"
+			case 2:
+				fieldType = " (boolean)"
+			}
+			parts = append(parts, fmt.Sprintf("%s: %s%s", field.Name, *field.Value, fieldType))
+		}
+	}
+	return strings.Join(parts, "\n")
 }

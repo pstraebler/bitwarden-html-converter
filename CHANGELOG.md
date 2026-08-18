@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### Added
-- 
+- add custom fields support
 
 ### Changed
 - 

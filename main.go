@@ -63,6 +63,9 @@ func main() {
 	checkPasswordRevision := widget.NewCheck("Password Revision Date", nil)
 	checkPasswordRevision.Checked = false
 
+	checkCustomFields := widget.NewCheck("Custom Fields", nil)
+	checkCustomFields.Checked = false
+
 	inputButton := widget.NewButton("Select JSON File", func() {
 		dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
@@ -121,6 +124,7 @@ func main() {
 			CreationDate:      checkCreationDate.Checked,
 			ModificationDate:  checkModificationDate.Checked,
 			PasswordRevision:  checkPasswordRevision.Checked,
+			CustomFields:      checkCustomFields.Checked,
 		}
 
 		statusLabel.SetText("Converting...")
@@ -156,6 +160,7 @@ func main() {
 		checkCreationDate,
 		checkModificationDate,
 		checkPasswordRevision,
+		checkCustomFields,
 	)
 
 	fieldsContainer := container.NewHBox(leftColumn, rightColumn)
