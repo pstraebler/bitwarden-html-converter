@@ -10,7 +10,7 @@
 - 
 
 ### Fixed
-- 
+- fix folder name in HTML export
 
 ## [1.0] - 2026-08-16
 

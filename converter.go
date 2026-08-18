@@ -147,6 +147,12 @@ func generateHTML(export BitwardenExport, options ExportOptions) string {
 	var sb strings.Builder
 	fields := options.Fields
 
+	// Create folder map for resolving folder names
+	folderMap := make(map[string]string)
+	for _, folder := range export.Folders {
+		folderMap[folder.ID] = folder.Name
+	}
+
 	sb.WriteString(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -630,7 +636,7 @@ func generateHTML(export BitwardenExport, options ExportOptions) string {
             <tbody>
 `)
 			for _, item := range items {
-				generateItemRow(&sb, item, fields)
+				generateItemRow(&sb, item, fields, folderMap)
 			}
 			sb.WriteString(`            </tbody>
         </table>
@@ -683,7 +689,7 @@ func generateHTML(export BitwardenExport, options ExportOptions) string {
             <tbody>
 `)
 			for _, item := range items {
-				generateItemRow(&sb, item, fields)
+				generateItemRow(&sb, item, fields, folderMap)
 			}
 			sb.WriteString(`            </tbody>
         </table>
@@ -694,7 +700,7 @@ func generateHTML(export BitwardenExport, options ExportOptions) string {
 	default:
 		// No grouping - original behavior
 		for _, item := range export.Items {
-			generateItemRow(&sb, item, fields)
+			generateItemRow(&sb, item, fields, folderMap)
 		}
 		sb.WriteString(`            </tbody>
         </table>
@@ -1096,7 +1102,7 @@ func groupItemsByFolder(items []BitwardenItem, folders []BitwardenFolder) map[st
 	return groups
 }
 
-func generateItemRow(sb *strings.Builder, item BitwardenItem, fields ExportFields) {
+func generateItemRow(sb *strings.Builder, item BitwardenItem, fields ExportFields, folderMap map[string]string) {
 	sb.WriteString("                <tr>\n")
 
 	// Type
@@ -1193,7 +1199,11 @@ func generateItemRow(sb *strings.Builder, item BitwardenItem, fields ExportField
 	if fields.Folder {
 		sb.WriteString("                    <td>")
 		if item.FolderID != nil && *item.FolderID != "" {
-			sb.WriteString(html.EscapeString(*item.FolderID))
+			folderName := *item.FolderID
+			if name, exists := folderMap[*item.FolderID]; exists {
+				folderName = name
+			}
+			sb.WriteString(html.EscapeString(folderName))
 		} else {
 			sb.WriteString("<span class=\"empty\">-</span>")
 		}
