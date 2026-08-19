@@ -20,17 +20,19 @@ Lightweight cross-platform application to convert Bitwarden JSON exports into a 
 Go to the [releases page](../../releases) and download the binary for your system:
 
 - **Windows**: `bitwarden-html-converter-windows-amd64.exe`
-- **macOS Intel**: `bitwarden-html-converter-macos-amd64`
-- **macOS Apple Silicon**: `bitwarden-html-converter-macos-arm64`
+- **macOS Intel**: `bitwarden-html-converter-macos-amd64.zip`
+- **macOS Apple Silicon**: `bitwarden-html-converter-macos-arm64.zip`
 - **Linux**: `bitwarden-html-converter-linux-amd64`
 
-### macOS/Linux
+### Linux
 
 After downloading, make the file executable:
 
 ```bash
 chmod +x bitwarden-html-converter-*
 ```
+
+On macOS, extract the archive and double-click `Bitwarden HTML Converter.app`.
 
 ## Usage
 
@@ -47,10 +49,10 @@ On macOS, the app may be blocked by Gatekeeper if it is not signed. You can allo
 #### Option 1: terminal
 
 ```bash
-xattr -d com.apple.quarantine bitwarden-html-converter-macos-arm64
+xattr -d com.apple.quarantine "Bitwarden HTML Converter.app"
 ```
 
-If you are using the Intel build, replace the filename accordingly.
+The Intel build uses the same procedure.
 
 #### Option 2: System Settings
 

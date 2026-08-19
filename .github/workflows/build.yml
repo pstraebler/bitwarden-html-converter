@@ -37,11 +37,13 @@ jobs:
             goos: darwin
             goarch: amd64
             output: bitwarden-html-converter-macos-amd64
+            archive: bitwarden-html-converter-macos-amd64.zip
           - os: macos-arm64
             runs-on: macos-latest
             goos: darwin
             goarch: arm64
             output: bitwarden-html-converter-macos-arm64
+            archive: bitwarden-html-converter-macos-arm64.zip
 
     steps:
       - name: Checkout code
@@ -74,11 +76,46 @@ jobs:
         run: |
           go build -o ${{ matrix.output }} -ldflags="-s -w" .
 
+      - name: Package macOS application
+        if: startsWith(matrix.os, 'macos-')
+        env:
+          APP_NAME: Bitwarden HTML Converter.app
+          BINARY_NAME: ${{ matrix.output }}
+          ARCHIVE_NAME: ${{ matrix.archive }}
+        run: |
+          APP_PATH="$APP_NAME"
+          mkdir -p "$APP_PATH/Contents/MacOS"
+          mv "$BINARY_NAME" "$APP_PATH/Contents/MacOS/bitwarden-html-converter"
+          chmod +x "$APP_PATH/Contents/MacOS/bitwarden-html-converter"
+          cat > "$APP_PATH/Contents/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDisplayName</key>
+              <string>Bitwarden HTML Converter</string>
+              <key>CFBundleExecutable</key>
+              <string>bitwarden-html-converter</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.pstraebler.bitwarden-html-converter</string>
+              <key>CFBundleName</key>
+              <string>Bitwarden HTML Converter</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+          </dict>
+          </plist>
+          PLIST
+          ditto -c -k --keepParent "$APP_PATH" "$ARCHIVE_NAME"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output }}
-          path: ${{ matrix.output }}
+          path: ${{ matrix.archive || matrix.output }}
 
   release:
     name: Create Release
