@@ -37,13 +37,11 @@ jobs:
             goos: darwin
             goarch: amd64
             output: bitwarden-html-converter-macos-amd64
-            archive: bitwarden-html-converter-macos-amd64.zip
           - os: macos-arm64
             runs-on: macos-latest
             goos: darwin
             goarch: arm64
             output: bitwarden-html-converter-macos-arm64
-            archive: bitwarden-html-converter-macos-arm64.zip
 
     steps:
       - name: Checkout code
@@ -109,13 +107,12 @@ jobs:
           </dict>
           </plist>
           PLIST
-          ditto -c -k --keepParent "$APP_PATH" "$ARCHIVE_NAME"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output }}
-          path: ${{ matrix.archive || matrix.output }}
+          path: ${{ startsWith(matrix.os, 'macos-') && 'Bitwarden HTML Converter.app' || matrix.output }}
 
   release:
     name: Create Release
@@ -134,10 +131,18 @@ jobs:
       - name: Display structure
         run: ls -R artifacts
 
+      - name: Package release files
+        run: |
+          mkdir -p release
+          cp artifacts/bitwarden-html-converter-linux-amd64/bitwarden-html-converter-linux-amd64 release/
+          cp artifacts/bitwarden-html-converter-windows-amd64/bitwarden-html-converter-windows-amd64.exe release/
+          (cd artifacts/bitwarden-html-converter-macos-amd64 && zip -r "../../release/bitwarden-html-converter-macos-amd64.zip" "Bitwarden HTML Converter.app")
+          (cd artifacts/bitwarden-html-converter-macos-arm64 && zip -r "../../release/bitwarden-html-converter-macos-arm64.zip" "Bitwarden HTML Converter.app")
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/*/*
+          files: release/*
           draft: false
           prerelease: false
           generate_release_notes: true
