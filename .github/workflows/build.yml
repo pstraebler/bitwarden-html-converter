@@ -79,9 +79,9 @@ jobs:
         env:
           APP_NAME: Bitwarden HTML Converter.app
           BINARY_NAME: ${{ matrix.output }}
-          ARCHIVE_NAME: ${{ matrix.archive }}
+          PACKAGE_DIR: macos-package
         run: |
-          APP_PATH="$APP_NAME"
+          APP_PATH="$PACKAGE_DIR/$APP_NAME"
           mkdir -p "$APP_PATH/Contents/MacOS"
           mv "$BINARY_NAME" "$APP_PATH/Contents/MacOS/bitwarden-html-converter"
           chmod +x "$APP_PATH/Contents/MacOS/bitwarden-html-converter"
@@ -112,7 +112,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output }}
-          path: ${{ startsWith(matrix.os, 'macos-') && 'Bitwarden HTML Converter.app' || matrix.output }}
+          path: ${{ startsWith(matrix.os, 'macos-') && 'macos-package' || matrix.output }}
 
   release:
     name: Create Release
