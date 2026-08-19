@@ -44,23 +44,21 @@ On macOS, extract the archive and double-click `Bitwarden HTML Converter.app`.
 
 ### macOS note
 
-On macOS, the app may be blocked by Gatekeeper if it is not signed. You can allow it in two ways:
+The macOS package is ad hoc signed, but it is not notarized by Apple. Gatekeeper may therefore still require one manual approval on the first launch.
 
 #### Option 1: terminal
 
 ```bash
-xattr -d com.apple.quarantine "Bitwarden HTML Converter.app"
+xattr -dr com.apple.quarantine "Bitwarden HTML Converter.app"
 ```
 
 The Intel build uses the same procedure.
 
-#### Option 2: System Settings
+#### Option 2: Finder
 
-1. Open **System Settings**
-2. Go to **Privacy & Security**
-3. Scroll down and look for a message saying that the app was blocked
-4. Click **Open Anyway**
-5. Confirm the warning to allow the application to run
+1. Right-click `Bitwarden HTML Converter.app`
+2. Select **Open**
+3. Confirm **Open** in the warning dialog
 
 After that, try launching the app again.
 

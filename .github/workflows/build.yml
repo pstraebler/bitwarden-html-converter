@@ -107,6 +107,9 @@ jobs:
           </dict>
           </plist>
           PLIST
+          codesign --force --deep --sign - "$APP_PATH"
+          codesign --verify --deep --strict "$APP_PATH"
+          xattr -cr "$APP_PATH"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
