@@ -42,25 +42,39 @@ On macOS, extract the archive and double-click `Bitwarden HTML Converter.app`.
 4. Click "Convert"
 5. Open the generated HTML file in your browser to print it
 
+### Windows note
+
+On Windows, the executable may be blocked by SmartScreen and show a warning such as "Windows protected your PC" or "This app may be dangerous".
+
+To launch it anyway:
+
+1. Double-click the `.exe`
+2. Click **More info** in the warning dialog
+3. Click **Run anyway**
+
+If needed, you can also right-click the executable, open **Properties**, and check **Unblock** before launching it.
+
 ### macOS note
 
 The macOS package is ad hoc signed, but it is not notarized by Apple. Gatekeeper may therefore still require one manual approval on the first launch.
 
-#### Option 1: terminal
+#### Option 1: Finder
+
+1. Open **System Settings**
+2. Go to **Privacy & Security**
+3. Scroll down and look for a message saying that the app was blocked
+4. Click **Open Anyway**
+5. Confirm the warning to allow the application to run
+
+After that, try launching the app again.
+
+#### Option 2: terminal
 
 ```bash
 xattr -dr com.apple.quarantine "Bitwarden HTML Converter.app"
 ```
 
 The Intel build uses the same procedure.
-
-#### Option 2: Finder
-
-1. Right-click `Bitwarden HTML Converter.app`
-2. Select **Open**
-3. Confirm **Open** in the warning dialog
-
-After that, try launching the app again.
 
 ## Export from Bitwarden
 
