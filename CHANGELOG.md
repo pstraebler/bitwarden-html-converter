@@ -5,6 +5,7 @@
 ### Added
 - macOS packaging
 - App footer
+- add support of alt f4 / ctrl q
 
 ### Changed
 - 

@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -219,5 +220,17 @@ func main() {
 	)
 
 	myWindow.SetContent(content)
+
+	// Add keyboard shortcuts to quit the application
+	ctrlQ := &desktop.CustomShortcut{KeyName: fyne.KeyQ, Modifier: fyne.KeyModifierControl}
+	altF4 := &desktop.CustomShortcut{KeyName: fyne.KeyF4, Modifier: fyne.KeyModifierAlt}
+
+	myWindow.Canvas().AddShortcut(ctrlQ, func(shortcut fyne.Shortcut) {
+		myApp.Quit()
+	})
+	myWindow.Canvas().AddShortcut(altF4, func(shortcut fyne.Shortcut) {
+		myApp.Quit()
+	})
+
 	myWindow.ShowAndRun()
 }
