@@ -2,14 +2,18 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 )
+
+const version = "1.1"
 
 func main() {
 	myApp := app.New()
@@ -186,6 +190,11 @@ func main() {
 
 	fieldsContainer := container.NewHBox(leftColumn, rightColumn)
 
+	// Version label with discrete styling
+	versionText := canvas.NewText(fmt.Sprintf("Bitwarden HTML Converter v%s", version), color.RGBA{R: 128, G: 128, B: 128, A: 255})
+	versionText.TextSize = 10
+	versionText.Alignment = fyne.TextAlignCenter
+
 	content := container.NewVBox(
 		widget.NewLabel("Bitwarden JSON to HTML Converter"),
 		widget.NewSeparator(),
@@ -205,6 +214,8 @@ func main() {
 		statusLabel,
 		widget.NewSeparator(),
 		quitButton,
+		widget.NewSeparator(),
+		container.NewCenter(versionText),
 	)
 
 	myWindow.SetContent(content)

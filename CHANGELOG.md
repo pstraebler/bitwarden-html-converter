@@ -4,6 +4,7 @@
 
 ### Added
 - macOS packaging
+- App footer
 
 ### Changed
 - 
