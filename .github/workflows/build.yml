@@ -139,7 +139,7 @@ jobs:
         run: |
           mkdir -p release
           cp artifacts/bitwarden-html-converter-linux-amd64/bitwarden-html-converter-linux-amd64 release/
-          cp artifacts/bitwarden-html-converter-windows-amd64/bitwarden-html-converter-windows-amd64.exe release/
+          cp artifacts/bitwarden-html-converter-windows-amd64.exe/bitwarden-html-converter-windows-amd64.exe release/
           (cd artifacts/bitwarden-html-converter-macos-amd64 && zip -r "../../release/bitwarden-html-converter-macos-amd64.zip" "Bitwarden HTML Converter.app")
           (cd artifacts/bitwarden-html-converter-macos-arm64 && zip -r "../../release/bitwarden-html-converter-macos-arm64.zip" "Bitwarden HTML Converter.app")
 
