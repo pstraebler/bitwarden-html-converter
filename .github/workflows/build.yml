@@ -77,6 +77,13 @@ jobs:
           mkdir -p "$APP_PATH/Contents/MacOS"
           mv "$BINARY_NAME" "$APP_PATH/Contents/MacOS/bitwarden-html-converter"
           chmod +x "$APP_PATH/Contents/MacOS/bitwarden-html-converter"
+          ICONSET="$(mktemp -d)/AppIcon.iconset"
+          mkdir -p "$ICONSET" "$APP_PATH/Contents/Resources"
+          for s in 16 32 128 256 512; do
+            sips -z $s $s assets/icon.png --out "$ICONSET/icon_${s}x${s}.png"
+            sips -z $((s*2)) $((s*2)) assets/icon.png --out "$ICONSET/icon_${s}x${s}@2x.png"
+          done
+          iconutil -c icns "$ICONSET" -o "$APP_PATH/Contents/Resources/AppIcon.icns"
           cat > "$APP_PATH/Contents/Info.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -86,6 +93,8 @@ jobs:
               <string>Bitwarden HTML Converter</string>
               <key>CFBundleExecutable</key>
               <string>bitwarden-html-converter</string>
+              <key>CFBundleIconFile</key>
+              <string>AppIcon</string>
               <key>CFBundleIdentifier</key>
               <string>com.pstraebler.bitwarden-html-converter</string>
               <key>CFBundleName</key>
