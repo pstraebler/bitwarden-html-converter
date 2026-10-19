@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] - 
+## [2.0] -  2026-10-19
 
 ### Added
 - macOS packaging
@@ -31,6 +31,7 @@
 ### Added
 - First public version.
 
-[Unreleased]: https://github.com/pstraebler/bitwarden-html-converter/compare/v1.1...HEAD
+[Unreleased]: https://github.com/pstraebler/bitwarden-html-converter/compare/v2.0...HEAD
+[2.0]: https://github.com/pstraebler/bitwarden-html-converter/releases/tag/v2.0
 [1.1]: https://github.com/pstraebler/bitwarden-html-converter/releases/tag/v1.1
 [1.0]: https://github.com/pstraebler/bitwarden-html-converter/releases/tag/v1.0

@@ -15,7 +15,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-const version = "1.1"
+const version = "2.0"
 
 func main() {
 	if len(os.Args) > 1 {
