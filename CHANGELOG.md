@@ -6,6 +6,7 @@
 - macOS packaging
 - App footer
 - add support of alt f4 / ctrl q
+- command-line interface (CLI)
 
 ### Changed
 - 

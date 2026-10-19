@@ -42,6 +42,29 @@ On macOS, extract the archive and double-click `Bitwarden HTML Converter.app`.
 4. Click "Convert"
 5. Open the generated HTML file in your browser to print it
 
+### Command line
+
+Passing arguments starts the converter in command-line mode instead of opening the window:
+
+```bash
+bitwarden-html-converter -i export.json -o output.html
+```
+
+Options:
+
+- `-i`: Bitwarden JSON export file (required)
+- `-o`: HTML file to write (required, `.html` is appended if missing)
+- `-fields`: comma-separated fields to include. Default: `type,name,username,password,notes`. Available: `type`, `name`, `username`, `password`, `notes`, `url`, `favorite`, `totp`, `folder`, `organization`, `creation-date`, `modification-date`, `password-revision`, `custom-fields`
+- `-group`: group entries by `none` (default), `type` or `folder`
+
+Example:
+
+```bash
+bitwarden-html-converter -i export.json -o output.html -group folder -fields name,username,password,url
+```
+
+Run `bitwarden-html-converter -h` to see all options.
+
 ### Windows note
 
 On Windows, the executable may be blocked by SmartScreen and show a warning such as "Windows protected your PC" or "This app may be dangerous".

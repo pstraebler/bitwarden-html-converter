@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"os"
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
@@ -17,6 +18,10 @@ import (
 const version = "1.1"
 
 func main() {
+	if len(os.Args) > 1 {
+		os.Exit(runCLI(os.Args[1:]))
+	}
+
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Bitwarden HTML Converter")
 	myWindow.Resize(fyne.NewSize(700, 600))
