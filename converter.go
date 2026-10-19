@@ -120,18 +120,9 @@ type ExportOptions struct {
 }
 
 func ConvertBitwardenToHTML(inputPath, outputPath string, options ExportOptions) error {
-	data, err := os.ReadFile(inputPath)
+	export, err := loadBitwardenExport(inputPath)
 	if err != nil {
-		return fmt.Errorf("error reading file: %w", err)
-	}
-
-	var export BitwardenExport
-	if err := json.Unmarshal(data, &export); err != nil {
-		return fmt.Errorf("error parsing JSON: %w", err)
-	}
-
-	if export.Encrypted {
-		return fmt.Errorf("file is encrypted, please export as unencrypted JSON")
+		return err
 	}
 
 	htmlContent := generateHTML(export, options)
@@ -141,6 +132,28 @@ func ConvertBitwardenToHTML(inputPath, outputPath string, options ExportOptions)
 	}
 
 	return nil
+}
+
+func loadBitwardenExport(inputPath string) (BitwardenExport, error) {
+	data, err := os.ReadFile(inputPath)
+	if err != nil {
+		return BitwardenExport{}, fmt.Errorf("error reading file: %w", err)
+	}
+
+	var export BitwardenExport
+	if err := json.Unmarshal(data, &export); err != nil {
+		return BitwardenExport{}, fmt.Errorf("invalid Bitwarden JSON export: %w", err)
+	}
+
+	if export.Encrypted {
+		return BitwardenExport{}, fmt.Errorf("file is encrypted, please export as unencrypted JSON")
+	}
+
+	if export.Items == nil {
+		return BitwardenExport{}, fmt.Errorf("invalid Bitwarden JSON export: no \"items\" list found")
+	}
+
+	return export, nil
 }
 
 func generateHTML(export BitwardenExport, options ExportOptions) string {
